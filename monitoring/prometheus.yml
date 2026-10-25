@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # LifeShare frontend (via Docker Compose or K8s service)
+  - job_name: "lifeshare-frontend"
+    static_configs:
+      - targets: ["lifeshare-frontend:3000"]
+    metrics_path: /
+    # serve returns HTTP metrics in access logs; for full metrics add a
+    # sidecar exporter (e.g. nginx-prometheus-exporter) when needed.
+
+  # MySQL exporter (deploy prom/mysqld-exporter sidecar)
+  - job_name: "lifeshare-db"
+    static_configs:
+      - targets: ["lifeshare-db:9104"]

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="pinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff2e54" />
+      <stop offset="100%" stop-color="#b30021" />
+    </linearGradient>
+    <linearGradient id="dropGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#ffb3c1" />
+    </linearGradient>
+    <!-- Shadow Effect -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- GPS Pin Shape -->
+  <path d="M 50 10 C 28 10 10 28 10 50 C 10 75 50 95 50 95 C 50 95 90 75 90 50 C 90 28 72 10 50 10 Z" 
+        fill="url(#pinGrad)" filter="url(#shadow)"/>
+  
+  <!-- Droplet Negative Space / Shape in the Center -->
+  <path d="M 50 32 
+           C 50 32, 64 48, 64 56 
+           A 14 14 0 1 1 36 56 
+           C 36 48, 50 32, 50 32 Z" 
+        fill="#ffffff" />
+        
+  <!-- Droplet Accent Inner Highlight -->
+  <path d="M 50 36 
+           C 50 36, 60 49, 60 55 
+           A 10 10 0 0 1 40 55 
+           C 40 49, 50 36, 50 36 Z" 
+        fill="url(#dropGrad)" opacity="0.3" />
+        
+  <!-- Pulse Rings at the base -->
+  <ellipse cx="50" cy="94" rx="12" ry="3" fill="#b30021" opacity="0.4"/>
+</svg>

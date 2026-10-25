@@ -1,0 +1,13 @@
+# Exclude everything not needed in the image
+node_modules
+npm-debug.log*
+generate_pdf.js
+JNTU_Project_Report.*
+docs/
+.github/
+.git/
+.env
+.env.local
+*.pdf
+*.md
+schema.sql

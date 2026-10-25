@@ -1,0 +1,26 @@
+{
+  "name": "lifeshare-gps-blood-finder",
+  "version": "1.0.0",
+  "description": "Blood Bank Availability Finder with GPS location services. Academic Capstone Project.",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve -l 3000",
+    "dev": "npx serve -l 3000"
+  },
+  "keywords": [
+    "blood-bank",
+    "gps",
+    "geolocation",
+    "leaflet",
+    "lifeshare"
+  ],
+  "author": "Athreya, Dhiraj, Rithwik, Sagar",
+  "license": "MIT",
+  "devDependencies": {
+    "puppeteer": "^25.1.0",
+    "serve": "^14.2.1"
+  },
+  "dependencies": {
+    "pdfkit": "^0.19.1"
+  }
+}

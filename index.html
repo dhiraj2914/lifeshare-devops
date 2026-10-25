@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lifeshare | GPS Blood Bank & Donor Finder</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Maps CSS Overrides styling is done directly in styles.css -->
+        
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="light-theme">
+  <!-- Theme Toggle Floating Button -->
+  <div class="theme-switch-wrapper" id="themeToggle" title="Toggle Theme">
+    <i class="fa-solid fa-moon"></i>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Map Settings Modal -->
+  <div id="mapSettingsModal" class="modal-overlay">
+    <div class="modal-content glass-panel animate-scale">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-gears text-primary"></i> Map Settings</h3>
+        <button class="modal-close" onclick="toggleMapSettings()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text">Paste your Google Maps JavaScript API Key below to unlock styled maps, coordinates, and search options. This key is saved locally in your browser session.</p>
+        <div class="form-group mt-3">
+          <label for="gmapsApiKey">Google Maps API Key</label>
+          <input type="password" id="gmapsApiKey" class="form-control" placeholder="e.g. AIzaSyA1...">
+        </div>
+        <p class="modal-warning-text" id="gmapsKeyWarning">
+          <i class="fa-solid fa-circle-exclamation text-warning"></i> Leaving this empty will load the map in Sandbox Mode (with a developmental watermark).
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="toggleMapSettings()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveMapSettings()">Save Key & Reload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-brand" onclick="switchTab('dashboard')">
+        <div class="logo-wrapper">
+          <img src="logo.svg" alt="Lifeshare Logo" class="brand-logo">
+        </div>
+        <span class="brand-text">Life<span class="highlight">share</span></span>
+      </a>
+      
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+
+      <ul class="nav-menu" id="navMenu">
+        <li class="nav-item">
+          <a href="#dashboard" class="nav-link active" onclick="switchTab('dashboard')">
+            <i class="fa-solid fa-chart-line"></i> Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#finder" class="nav-link" onclick="switchTab('finder')">
+            <i class="fa-solid fa-map-location-dot"></i> GPS Finder
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#register" class="nav-link" onclick="switchTab('register')">
+            <i class="fa-solid fa-hand-holding-heart"></i> Be a Donor
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#request" class="nav-link" onclick="switchTab('request')">
+            <i class="fa-solid fa-kit-medical"></i> Request Blood
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#requests-board" class="nav-link" onclick="switchTab('requests-board')">
+            <i class="fa-solid fa-clipboard-list"></i> Active Requests
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a href="#project-details" class="nav-link" onclick="switchTab('project-details')">
+            <i class="fa-solid fa-graduation-cap"></i> Team & Info
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Layout Wrapper -->
+  <main class="main-content">
+    
+    <!-- SECTION: DASHBOARD -->
+    <section id="dashboard" class="tab-panel active">
+      <!-- Hero Banner -->
+      <div class="hero-section">
+        <div class="hero-text-content">
+          <span class="badge badge-emergency"><i class="fa-solid fa-circle-dot"></i> Direct Emergency Finder</span>
+          <h1 class="hero-title">Find Blood Donors & Banks in Hyderabad</h1>
+          <p class="hero-subtitle">
+            Direct peer-to-peer connection for critical blood requests. Locate donors and hospitals in your radius, coordinate instantly via call/SMS, and save lives. Zero delays, zero middlemen.
+          </p>
+          <div class="hero-buttons">
+            <button class="btn btn-primary btn-lg" onclick="switchTab('finder')">
+              <i class="fa-solid fa-magnifying-glass-location"></i> Find Blood Now
+            </button>
+            <button class="btn btn-secondary btn-lg" onclick="switchTab('register')">
+              <i class="fa-solid fa-heart"></i> Register as Donor
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Finder Search Bar -->
+      <div class="quick-finder-bar glass-panel">
+        <div class="quick-finder-title">
+          <h3>Quick Emergency Lookup</h3>
+        </div>
+        <div class="quick-finder-form">
+          <div class="input-group-wrapper">
+            <label for="quickBloodGroup"><i class="fa-solid fa-droplet text-primary"></i> Blood Group Required</label>
+            <select id="quickBloodGroup" class="form-select">
+              <option value="O+">O+ (O Positive)</option>
+              <option value="O-">O- (O Negative)</option>
+              <option value="A+">A+ (A Positive)</option>
+              <option value="A-">A- (A Negative)</option>
+              <option value="B+">B+ (B Positive)</option>
+              <option value="B-">B- (B Negative)</option>
+              <option value="AB+">AB+ (AB Positive)</option>
+              <option value="AB-">AB- (AB Negative)</option>
+            </select>
+          </div>
+          <div class="input-group-wrapper">
+            <label for="quickSearchType"><i class="fa-solid fa-hospital-user text-primary"></i> Find For</label>
+            <select id="quickSearchType" class="form-select">
+              <option value="all">Donors & Hospitals</option>
+              <option value="donors">Donors Only</option>
+              <option value="hospitals">Hospitals & Blood Banks</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="triggerQuickSearch()">
+            <i class="fa-solid fa-location-crosshairs"></i> Search Nearby
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card glass-panel card-hover">
+          <div class="stat-icon-wrapper blood-bg">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div class="stat-info">
+            <h4 class="stat-value" id="statDonorsCount">48</h4>
+            <span class="stat-label">Active Donors Nearby</span>
+          </div>
+          <div class="stat-trend trend-up">
+            <i class="fa-solid fa-circle pulse-green"></i> Live GPS Online
+          </div>
+        </div>
+
+        <div class="stat-card glass-panel card-hover">
+          <div class="stat-icon-wrapper hospital-bg">
+            <i class="fa-solid fa-hospital"></i>
+          </div>
+          <div class="stat-info">
+            <h4 class="stat-value" id="statHospitalsCount">12</h4>
+            <span class="stat-label">Affiliated Hospitals</span>
+          </div>
+          <div class="stat-trend">
+            <i class="fa-solid fa-shield-halved text-success"></i> Verified Banks
+          </div>
+        </div>
+
+        <div class="stat-card glass-panel card-hover">
+          <div class="stat-icon-wrapper alert-bg">
+            <i class="fa-solid fa-heart-pulse"></i>
+          </div>
+          <div class="stat-info">
+            <h4 class="stat-value" id="statActiveRequests">6</h4>
+            <span class="stat-label">Urgent Requests</span>
+          </div>
+          <div class="stat-trend trend-emergency">
+            <i class="fa-solid fa-triangle-exclamation"></i> Immediate need
+          </div>
+        </div>
+
+        <div class="stat-card glass-panel card-hover">
+          <div class="stat-icon-wrapper match-bg">
+            <i class="fa-solid fa-handshake-angle"></i>
+          </div>
+          <div class="stat-info">
+            <h4 class="stat-value" id="statMatchesCount">142</h4>
+            <span class="stat-label">Life Saved Matches</span>
+          </div>
+          <div class="stat-trend text-muted">
+            <i class="fa-solid fa-clock-rotate-left"></i> Real-time tracking
+          </div>
+        </div>
+      </div>
+
+      <!-- Overview Info Cards -->
+      <div class="overview-grid">
+        <div class="overview-card glass-panel">
+          <h3>Blood Bank Stock Status</h3>
+          <p class="section-subtitle">Real-time availability across regional hospitals</p>
+          <div class="stock-container">
+            <div class="stock-bar-item">
+              <div class="stock-meta">
+                <span class="stock-group">O+</span>
+                <span class="stock-qty">82% Available</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar high" style="width: 82%;"></div>
+              </div>
+            </div>
+            <div class="stock-bar-item">
+              <div class="stock-meta">
+                <span class="stock-group">O- (Universal)</span>
+                <span class="stock-qty">24% Critically Low</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar low" style="width: 24%;"></div>
+              </div>
+            </div>
+            <div class="stock-bar-item">
+              <div class="stock-meta">
+                <span class="stock-group">A+</span>
+                <span class="stock-qty">68% Available</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar moderate" style="width: 68%;"></div>
+              </div>
+            </div>
+            <div class="stock-bar-item">
+              <div class="stock-meta">
+                <span class="stock-group">B+</span>
+                <span class="stock-qty">75% Available</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar high" style="width: 75%;"></div>
+              </div>
+            </div>
+            <div class="stock-bar-item">
+              <div class="stock-meta">
+                <span class="stock-group">AB- (Rare)</span>
+                <span class="stock-qty">15% Critically Low</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar critical" style="width: 15%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="overview-card glass-panel">
+          <h3>How Direct Match Works</h3>
+          <p class="section-subtitle">Connecting you directly to verified sources nearby</p>
+          <div class="features-list">
+            <div class="feature-item">
+              <div class="feature-icon"><i class="fa-solid fa-location-crosshairs text-primary"></i></div>
+              <div class="feature-desc">
+                <h4>Instant Proximity Search</h4>
+                <p>Detects your location to calculate exact direct distances to donors or hospital stocks in real-time.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><i class="fa-solid fa-phone-volume text-primary"></i></div>
+              <div class="feature-desc">
+                <h4>Direct Communication</h4>
+                <p>Reach out directly via Call, SMS, or WhatsApp. No account sign-up is required for emergency seekers.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><i class="fa-solid fa-shield-halved text-primary"></i></div>
+              <div class="feature-desc">
+                <h4>Privacy & Control</h4>
+                <p>Registered donors have complete authority to toggle their active coordinates and availability status anytime.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+    </section>
+
+    <!-- SECTION: GPS FINDER MAP -->
+    <section id="finder" class="tab-panel">
+      <div class="finder-header">
+        <div class="header-text">
+          <h2>GPS Live Locator & Map</h2>
+          <p class="section-subtitle">Enable GPS or click anywhere on the map to drop a custom pin and find nearby resources.</p>
+        </div>
+        <div class="header-actions font-sans">
+          <button class="btn btn-secondary" onclick="getUserLocation()" title="Detect current GPS location">
+            <i class="fa-solid fa-location-arrow"></i> My Location
+          </button>
+          <button class="btn btn-secondary" id="mapSettingsBtn" onclick="toggleMapSettings()" title="Configure Google Maps API Key">
+            <i class="fa-solid fa-gear"></i> Setup Map API
+          </button>
+        </div>
+      </div>
+
+      <div class="map-view-container">
+        <!-- Sidebar Controls -->
+        <div class="map-sidebar glass-panel">
+          <div class="sidebar-section">
+            <h4><i class="fa-solid fa-sliders"></i> Filter Parameters</h4>
+            
+            <div class="form-group">
+              <label for="filterBloodGroup">Select Blood Group</label>
+              <select id="filterBloodGroup" class="form-select" onchange="applyFilters()">
+                <option value="all">All Groups</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="filterType">Resource Type</label>
+              <select id="filterType" class="form-select" onchange="applyFilters()">
+                <option value="all">Show All</option>
+                <option value="donors">Donors Only</option>
+                <option value="hospitals">Hospitals Only</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="filterRadius">Search Radius: <span id="radiusVal">15</span> km</label>
+              <input type="range" id="filterRadius" class="form-range" min="2" max="50" value="15" 
+                     oninput="updateRadiusLabel(this.value)" onchange="applyFilters()">
+            </div>
+          </div>
+
+          <!-- Matching List -->
+          <div class="sidebar-section results-section">
+            <h4><i class="fa-solid fa-list-check"></i> Nearby Resources (<span id="resultsCount">0</span>)</h4>
+            <div class="results-list" id="resultsList">
+              <!-- Result cards will be injected by app.js -->
+              <div class="no-results">
+                <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                <p>Click "My Location" to fetch coordinates or adjust filters to view nearby matches.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- The Map -->
+        <div class="map-area-wrapper">
+          <div id="map"></div>
+          <div class="map-coords-badge" id="coordsBadge">
+            <i class="fa-solid fa-location-crosshairs text-primary"></i> GPS Coordinates: Not active
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: REGISTER DONOR -->
+    <section id="register" class="tab-panel">
+      <div class="form-panel-grid">
+        <div class="form-info-side">
+          <span class="badge badge-success"><i class="fa-solid fa-shield"></i> Secure Data</span>
+          <h2>Register as an Active Donor</h2>
+          <p>Your donation can save lives in critical hours. Register your contact details and rough location coordinates. Your details will only be queryable for emergency searches matching your specific blood type.</p>
+          
+          <div class="stats-mini glass-panel">
+            <div class="stat-mini-item">
+              <i class="fa-solid fa-droplet text-primary"></i>
+              <div>
+                <h5>O- Positive Need</h5>
+                <p>High demand for universal donor types this week.</p>
+              </div>
+            </div>
+            <div class="stat-mini-item">
+              <i class="fa-solid fa-clock-rotate-left text-success"></i>
+              <div>
+                <h5>Toggle Availability</h5>
+                <p>You can change your availability status to "Busy" anytime.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-container-side glass-panel">
+          <form id="donorForm" onsubmit="handleDonorRegistration(event)">
+            <div class="form-row">
+              <div class="form-group col-12">
+                <label for="donorName">Full Name</label>
+                <input type="text" id="donorName" class="form-control" placeholder="e.g., John Doe" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-6">
+                <label for="donorBloodGroup">Blood Group</label>
+                <select id="donorBloodGroup" class="form-select" required>
+                  <option value="" disabled selected>Select</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+              <div class="form-group col-6">
+                <label for="donorPhone">Contact Number</label>
+                <input type="tel" id="donorPhone" class="form-control" placeholder="e.g., +91 9876543210" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="donorEmail">Email Address</label>
+              <input type="email" id="donorEmail" class="form-control" placeholder="e.g., john@example.com" required>
+            </div>
+
+            <!-- GPS Location Integration -->
+            <div class="location-picker-group">
+              <label><i class="fa-solid fa-location-dot text-primary"></i> GPS Coordinates (Required)</label>
+              <p class="help-text">Click to auto-detect location or manually enter details below.</p>
+              
+              <div class="location-action-bar">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="detectDonorLocation()">
+                  <i class="fa-solid fa-crosshairs"></i> Fetch My Location
+                </button>
+                <span class="location-status" id="donorLocationStatus">Coordinates missing</span>
+              </div>
+              
+              <div class="form-row mt-2">
+                <div class="form-group col-6">
+                  <label for="donorLat">Latitude</label>
+                  <input type="number" step="any" id="donorLat" class="form-control form-control-sm" placeholder="e.g., 17.3850" required>
+                </div>
+                <div class="form-group col-6">
+                  <label for="donorLng">Longitude</label>
+                  <input type="number" step="any" id="donorLng" class="form-control form-control-sm" placeholder="e.g., 78.4867" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="donorConsent" required>
+                <label class="form-check-label" for="donorConsent">
+                  I agree to make my blood group and location details visible for emergency searches.
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block mt-4">
+              <i class="fa-solid fa-heart-pulse"></i> Submit Registration
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Donor Health Portal subpanel -->
+      <div class="donor-portal-section mt-5 border-top pt-5">
+        <h2 class="text-center mb-2"><i class="fa-solid fa-hospital-user text-primary"></i> LifeShare Donor Portal</h2>
+        <p class="text-center section-subtitle mb-4">View your historical medical vitals recorded during your last donation screening.</p>
+        
+        <div class="portal-grid">
+          <div class="portal-sidebar glass-panel">
+            <h4>Select Registered Profile</h4>
+            <div class="form-group mt-3">
+              <select id="portalDonorSelect" class="form-select" onchange="updatePortalDashboard(this.value)">
+                <!-- Populated dynamically via JS -->
+              </select>
+            </div>
+            <div class="eligibility-status-box mt-4" id="portalEligibilityCard">
+              <h5>Donation Eligibility</h5>
+              <div id="eligibilityMessage">
+                <p class="status-msg text-success mt-2"><i class="fa-solid fa-circle-check"></i> Eligible to Donate today!</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="portal-dashboard-main glass-panel">
+            <div class="vitals-grid">
+              <!-- Vital 1 -->
+              <div class="vital-dial-card">
+                <span class="vital-label">Blood Pressure</span>
+                <h4 class="vital-value" id="vitalBP">120/80 <span class="vital-unit">mmHg</span></h4>
+                <span class="vital-status status-normal" id="statusBP">Optimal</span>
+              </div>
+              <!-- Vital 2 -->
+              <div class="vital-dial-card">
+                <span class="vital-label">Hemoglobin</span>
+                <h4 class="vital-value" id="vitalHgb">14.2 <span class="vital-unit">g/dL</span></h4>
+                <span class="vital-status status-normal" id="statusHgb">Healthy</span>
+              </div>
+              <!-- Vital 3 -->
+              <div class="vital-dial-card">
+                <span class="vital-label">Pulse Rate</span>
+                <h4 class="vital-value" id="vitalPulse">72 <span class="vital-unit">bpm</span></h4>
+                <span class="vital-status status-normal" id="statusPulse">Healthy</span>
+              </div>
+              <!-- Vital 4 -->
+              <div class="vital-dial-card">
+                <span class="vital-label">Total Cholesterol</span>
+                <h4 class="vital-value" id="vitalChol">185 <span class="vital-unit">mg/dL</span></h4>
+                <span class="vital-status status-normal" id="statusChol">Normal</span>
+              </div>
+            </div>
+            <div class="portal-disclaimer mt-3">
+              <i class="fa-solid fa-circle-info text-primary"></i>
+              <span>Vitals are captured during pre-donation screenings. These results are mock indicators for academic demonstration and not medical diagnostic replacements.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: REQUEST BLOOD -->
+    <section id="request" class="tab-panel">
+      <div class="form-panel-grid">
+        <div class="form-info-side">
+          <span class="badge badge-emergency"><i class="fa-solid fa-circle-exclamation pulse"></i> Urgent Request</span>
+          <h2>Post an Emergency Request</h2>
+          <p>Need blood urgently for a patient? Post details along with the hospital coordinates. Nearby registered donors will view your broadcast and can connect with you directly.</p>
+          
+          <div class="emergency-guide glass-panel mt-4">
+            <h4>Emergency Guidelines:</h4>
+            <ul>
+              <li><i class="fa-solid fa-circle-check text-primary"></i> Specify the correct hospital name and coordinates.</li>
+              <li><i class="fa-solid fa-circle-check text-primary"></i> Set the urgency level to "Critical" for immediate visual flags.</li>
+              <li><i class="fa-solid fa-circle-check text-primary"></i> Ensure contact numbers are active and responsive.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="form-container-side glass-panel">
+          <form id="requestForm" onsubmit="handleBloodRequest(event)">
+            <div class="form-row">
+              <div class="form-group col-12">
+                <label for="reqPatientName">Patient Full Name</label>
+                <input type="text" id="reqPatientName" class="form-control" placeholder="e.g., Alice Smith" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-6">
+                <label for="reqBloodGroup">Required Blood Group</label>
+                <select id="reqBloodGroup" class="form-select" required>
+                  <option value="" disabled selected>Select</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+              <div class="form-group col-6">
+                <label for="reqUrgency">Urgency Level</label>
+                <select id="reqUrgency" class="form-select" required>
+                  <option value="Routine">Routine / Planned</option>
+                  <option value="Urgent">Urgent (Within 24 Hours)</option>
+                  <option value="Critical" class="text-danger">CRITICAL (Immediate)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-12">
+                <label for="reqHospital">Hospital Name & Address</label>
+                <input type="text" id="reqHospital" class="form-control" placeholder="e.g., Apollo Hospital, Jubilee Hills" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-12">
+                <label for="reqContact">Emergency Contact Number</label>
+                <input type="tel" id="reqContact" class="form-control" placeholder="e.g., +91 9876543222" required>
+              </div>
+            </div>
+
+            <!-- GPS Location for hospital -->
+            <div class="location-picker-group">
+              <label><i class="fa-solid fa-hospital-user text-primary"></i> Hospital GPS Location</label>
+              <p class="help-text">Auto-detect location of hospital/yourself, or fill manually.</p>
+              
+              <div class="location-action-bar">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="detectRequestLocation()">
+                  <i class="fa-solid fa-crosshairs"></i> Get Current GPS
+                </button>
+                <span class="location-status" id="reqLocationStatus">Coordinates missing</span>
+              </div>
+              
+              <div class="form-row mt-2">
+                <div class="form-group col-6">
+                  <label for="reqLat">Latitude</label>
+                  <input type="number" step="any" id="reqLat" class="form-control form-control-sm" placeholder="e.g., 17.3850" required>
+                </div>
+                <div class="form-group col-6">
+                  <label for="reqLng">Longitude</label>
+                  <input type="number" step="any" id="reqLng" class="form-control form-control-sm" placeholder="e.g., 78.4867" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <label for="reqMessage">Additional Information (Optional)</label>
+              <textarea id="reqMessage" class="form-control" rows="2" placeholder="e.g., Room 304, Unit requirement is 2 Bags..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block mt-4">
+              <i class="fa-solid fa-bullhorn"></i> Broadcast Request
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: ACTIVE REQUESTS BOARD -->
+    <section id="requests-board" class="tab-panel">
+      <div class="finder-header">
+        <div class="header-text">
+          <h2>Active Emergency Requests</h2>
+          <p class="section-subtitle">View and respond to emergency blood requirements in real-time. Reach out to coordinate delivery.</p>
+        </div>
+      </div>
+
+      <div class="requests-grid" id="requestsGrid">
+        <!-- Request cards will be injected by app.js -->
+        <div class="no-results py-5">
+          <i class="fa-solid fa-circle-check text-success" style="font-size: 3rem;"></i>
+          <p class="mt-3">No active emergency requests reported. Everything looks stable!</p>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- SECTION: TEAM & PROJECT INFO -->
+    <section id="project-details" class="tab-panel">
+      <!-- Project Abstract Section -->
+      <div class="abstract-card glass-panel">
+        <div class="abstract-header">
+          <i class="fa-solid fa-file-invoice-solid"></i>
+          <div>
+            <span class="project-tag">CS/IT Capstone Project</span>
+            <h2>Project Abstract & Design</h2>
+          </div>
+        </div>
+        
+        <div class="abstract-content">
+          <p>
+            The <strong>Blood Bank Availability Finder with GPS</strong> is a web-based application designed to provide quick and efficient access to blood availability information during medical emergencies. Traditional methods of searching for blood donors are often manual, time-consuming, and lack real-time coordination, which can lead to critical delays. This project aims to address these challenges by developing a centralized and data-driven system that integrates location-based services for improved accessibility.
+          </p>
+          <p>
+            The system is developed using a client-server architecture, where the frontend is implemented using HTML, CSS, and JavaScript to provide an interactive user interface, and the backend is developed using server-side technologies to handle application logic and data processing. A relational database management system (MySQL) is used to store and manage structured data including donor details, blood group availability, and hospital records.
+          </p>
+          <p>
+            A key feature of the system is the integration of the <strong>Geolocation API</strong>, which enables the application to fetch the user's current location in terms of latitude and longitude. Based on this information, the system identifies and displays nearby donors or hospitals matching the required blood group. This location-based filtering enhances the efficiency of search operations and significantly reduces response time during emergency situations.
+          </p>
+          <p>
+            The application includes modules such as user registration, donor management, blood availability tracking, and search functionality. Users can request blood, while donors and administrators can update availability dynamically. Basic authentication mechanisms are implemented to ensure secure and controlled access to the system.
+          </p>
+        </div>
+      </div>
+
+      <!-- Project Team Grid -->
+      <div class="team-container mt-5">
+        <h2 class="text-center mb-4">Project Developers & Mentor</h2>
+        
+        <div class="team-grid">
+          <!-- Team Member 1 -->
+          <div class="team-card glass-panel text-center">
+            <div class="avatar-wrapper">
+              <span class="avatar-text">AS</span>
+            </div>
+            <h3>Athreya</h3>
+            <span class="member-role">Team Lead & Systems Architect</span>
+            <p class="member-desc">Designed client-server routing structures and optimized SQL query procedures for donor indexing.</p>
+            <div class="member-meta">ID: 24011MB502</div>
+          </div>
+
+          <!-- Team Member 2 -->
+          <div class="team-card glass-panel text-center">
+            <div class="avatar-wrapper">
+              <span class="avatar-text">DG</span>
+            </div>
+            <h3>Dhiraj</h3>
+            <span class="member-role">GPS & Geolocation Specialist</span>
+            <p class="member-desc">Implemented HTML5 Geolocation API components and Leaflet distance calculation algorithms.</p>
+            <div class="member-meta">ID: 24011MB516</div>
+          </div>
+
+          <!-- Team Member 3 -->
+          <div class="team-card glass-panel text-center">
+            <div class="avatar-wrapper">
+              <span class="avatar-text">RR</span>
+            </div>
+            <h3>Rithwik</h3>
+            <span class="member-role">Backend & Database Engineer</span>
+            <p class="member-desc">Established database schemas, relationships, and managed transactional integrity for real-time updates.</p>
+            <div class="member-meta">ID: 24011M2113</div>
+          </div>
+
+          <!-- Team Member 4 -->
+          <div class="team-card glass-panel text-center">
+            <div class="avatar-wrapper">
+              <span class="avatar-text">BS</span>
+            </div>
+            <h3>Sagar</h3>
+            <span class="member-role">UI/UX Designer & Frontend Engineer</span>
+            <p class="member-desc">Developed visual components, state animations, and verified responsive stylesheet viewports.</p>
+            <div class="member-meta">ID: 24011M2112</div>
+          </div>
+        </div>
+
+        <!-- Academic Advisor / Professor -->
+        <div class="supervisor-section glass-panel mt-5">
+          <div class="supervisor-icon">
+            <i class="fa-solid fa-user-tie"></i>
+          </div>
+          <div class="supervisor-info">
+            <span class="supervisor-badge">PROJECT GUIDE</span>
+            <h3>Dr. K Suresh-Babu</h3>
+            <h5 class="supervisor-title">M.Tech, Ph.D. (CSE), LMCSI</h5>
+            <p class="supervisor-desc">Professor of CSE, Training & Placement Officer (TPO) & PTPG Coordinator.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <img src="logo.svg" alt="Lifeshare Logo" class="footer-logo">
+        <span>Life<span class="highlight">share</span></span>
+      </div>
+      <p class="footer-text">
+        Lifeshare © 2026. Academic Capstone Project - Team No: 08.
+      </p>
+      <div class="footer-meta">
+        <span><i class="fa-solid fa-code"></i> HTML5, CSS3, ES6 & Leaflet Map API</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Dynamically loaded Google Maps API script -->
+  
+  <!-- Main Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

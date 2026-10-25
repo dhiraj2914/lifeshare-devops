@@ -1,0 +1,20 @@
+# ── Node ──
+node_modules/
+npm-debug.log*
+.npm
+
+# ── Secrets ──
+.env
+*.env.local
+
+# ── Generated build artefacts ──
+JNTU_Project_Report.pdf
+JNTU_Project_Report.html
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── Editor ──
+.vscode/
+*.swp
