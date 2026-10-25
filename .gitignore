@@ -6,6 +6,8 @@ npm-debug.log*
 # ── Secrets ──
 .env
 *.env.local
+k8s/secret.yaml
+!k8s/secret.example.yaml
 
 # ── Generated build artefacts ──
 JNTU_Project_Report.pdf
