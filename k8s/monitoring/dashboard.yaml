@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lifeshare-grafana-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    release: prometheus-stack
+data:
+  lifeshare-dashboard.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "title": "LifeShare Web Available Pod Count",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "kube_deployment_status_replicas_available{namespace=\"lifeshare\", deployment=\"lifeshare-web\"}",
+              "legendFormat": "Available Pods"
+            }
+          ]
+        },
+        {
+          "title": "LifeShare Web Desired Pod Count",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+          "targets": [
+            {
+              "expr": "kube_deployment_spec_replicas{namespace=\"lifeshare\", deployment=\"lifeshare-web\"}",
+              "legendFormat": "Desired Pods"
+            }
+          ]
+        },
+        {
+          "title": "Web Pod Restarts",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"lifeshare\", container=\"web\"})",
+              "legendFormat": "Total Restarts"
+            }
+          ]
+        },
+        {
+          "title": "HPA Current Replicas",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+          "targets": [
+            {
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"lifeshare\", horizontalpodautoscaler=\"lifeshare-web-hpa\"}",
+              "legendFormat": "HPA Replicas"
+            }
+          ]
+        },
+        {
+          "title": "Web Pods CPU Usage",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"lifeshare\", container=\"web\"}[1m])) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "title": "Web Pods Memory Usage (Working Set)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"lifeshare\", container=\"web\"}) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["lifeshare", "devops"],
+      "time": { "from": "now-15m", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "LifeShare Deployment Overview"
+    }
