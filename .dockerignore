@@ -1,13 +1,23 @@
-# Exclude everything not needed in the image
-node_modules
-npm-debug.log*
+# Node artefacts (not needed in PHP image)
+node_modules/
+package-lock.json
 generate_pdf.js
 JNTU_Project_Report.*
-docs/
-.github/
-.git/
+
+# Secrets — never bake into image
 .env
 .env.local
-*.pdf
-*.md
-schema.sql
+
+# DevOps meta
+.git/
+.github/
+docs/
+k8s/
+monitoring/
+rollback.ps1
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp

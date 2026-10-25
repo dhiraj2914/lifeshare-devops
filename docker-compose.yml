@@ -1,52 +1,65 @@
-# ──────────────────────────────────────────────────────────────
-# LifeShare – Docker Compose (local development stack)
-# Services: frontend (static server) + db (MySQL 8)
-# ──────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# LifeShare – Docker Compose  (Stage 1: php:8.2-apache + mysql:8)
+#
+# Services
+#   web   – PHP 8.2 + Apache serving static files and /api/* + /health.php
+#   mysql – MySQL 8.0 with named volume and schema/seed auto-loaded
+#
+# Usage
+#   Start  : docker compose up -d --build
+#   Stop   : docker compose stop
+#   Rebuild: docker compose up -d --build --force-recreate
+#   Logs   : docker compose logs -f
+# ─────────────────────────────────────────────────────────────────────────────
 services:
-  # ── Static frontend ────────────────────────────────────────
-  frontend:
+
+  # ── PHP + Apache web server ─────────────────────────────────────────────
+  web:
     build:
       context: .
       dockerfile: Dockerfile
-    image: lifeshare-frontend:local
-    container_name: lifeshare-frontend
+    image: lifeshare-web:stage1
+    container_name: lifeshare-web
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${APP_PORT:-8080}:80"
     environment:
-      NODE_ENV: production
+      DB_HOST:     ${DB_HOST:-mysql}
+      DB_NAME:     ${DB_NAME:-blood_bank_db}
+      DB_USER:     ${DB_USER:-lifeshare}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
-      db:
+      mysql:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      test: ["CMD", "curl", "-sf", "http://localhost/health.php"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 40s
 
-  # ── MySQL database ──────────────────────────────────────────
-  db:
+  # ── MySQL 8 ─────────────────────────────────────────────────────────────
+  mysql:
     image: mysql:8.0
-    container_name: lifeshare-db
+    container_name: lifeshare-mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE:      ${DB_NAME:-blood_bank_db}
+      MYSQL_USER:          ${DB_USER:-lifeshare}
+      MYSQL_PASSWORD:      ${DB_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     ports:
-      - "3307:3306"    # host 3307 → container 3306 (avoids conflicts with local MySQL)
+      - "3307:3306"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost",
              "-u", "root", "--password=${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 12
+      start_period: 40s
 
 volumes:
   db_data:
