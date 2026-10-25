@@ -2,7 +2,7 @@
 // Application State & Configuration
 // ==========================================================================
 const CONFIG = {
-  // Default coordinates (Hyderabad, India - matching student/mentor locations)
+  // Default coordinates (Hyderabad, India)
   defaultCoords: { lat: 17.385044, lng: 78.486671 },
   // Local storage keys
   storageKeys: {
