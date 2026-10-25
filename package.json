@@ -5,7 +5,9 @@
   "main": "index.html",
   "scripts": {
     "start": "npx serve -l 3000",
-    "dev": "npx serve -l 3000"
+    "dev": "npx serve -l 3000",
+    "test": "node --test tests/haversine.test.js tests/api.test.js",
+    "test:unit": "node --test tests/haversine.test.js"
   },
   "keywords": [
     "blood-bank",
