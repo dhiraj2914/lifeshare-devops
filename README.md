@@ -1,161 +1,331 @@
-# LifeShare — GPS Blood Bank & Donor Availability Finder
+# LifeShare — GPS Blood Bank Availability Finder
 
-LifeShare is an academic capstone application designed to bridge blood donors, healthcare centers, and patients in emergencies using real-time GPS Geolocation, Haversine spherical distance sorting, and dynamic inventory management.
-
-This repository contains the complete application and enterprise DevOps pipeline: Docker containerization, GitHub Actions CI/CD with security scanning, local Kubernetes deployment on `kind` with Horizontal Pod Autoscaling (HPA) and zero-downtime rollback, and a full Prometheus/Grafana monitoring suite.
+LifeShare is a web-based, GPS-enabled blood bank and donor availability finder designed to bridge the gap between voluntary blood donors, hospitals, and patients during critical medical emergencies.
 
 ---
 
-## 1. Prerequisites
+## 1. Project Overview & Problem Solved
 
-- **OS:** Windows 10/11, macOS, or Linux
-- **Docker Desktop:** Running with Linux containers
-- **Tools:**
-  - `git`
-  - `curl` (use `curl.exe` on Windows PowerShell)
-  - `kubectl` (v1.28+)
-  - `kind` (v0.20+)
-  - `helm` (v3+)
-  - `node` (v20+ for local tests)
+In critical medical situations—such as urgent surgical procedures, trauma cases, or severe anemia—delays in finding compatible blood units can be life-threatening. The conventional workflow often involves making manual phone calls to dispersed blood banks, facing inaccurate inventory records, or traveling between facilities without confirmation of availability.
+
+**LifeShare solves this problem by:**
+- Aggregating real-time hospital blood stock levels and available voluntary donors into a centralized interface.
+- Utilizing HTML5 Geolocation to identify the user's immediate coordinates.
+- Calculating geodesic distances to every facility using the mathematical Haversine formula.
+- Sorting available blood banks and donors nearest-first so emergency responders and families can reach the closest verified unit immediately.
+- Providing direct emergency call buttons, WhatsApp sharing links, and turn-by-turn directions.
 
 ---
 
-## 2. One-Command Local Start (Docker Compose)
+## 2. Features
 
-For quick local development without Kubernetes:
+- **Blood Bank & Hospital Search:** Filter registered hospitals and blood banks by specific blood groups (`A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+`, `O-`) to view current unit stock.
+- **GPS Location Detection:** Uses the browser's HTML5 Geolocation API (`navigator.geolocation`) to identify the user's current latitude and longitude. Also supports manual map click to drop a custom reference pin.
+- **Nearest-First Proximity Sorting:** Automatically computes the spherical distance between the user's coordinates and all healthcare centers or donors, displaying matching results sorted in ascending order of distance (km).
+- **Interactive Map View:** Visual map interface powered by Leaflet.js / Google Maps API displaying user location, hospital markers, donor pins, and coverage radius.
+- **Voluntary Donor Network:** Platform for voluntary donors to register their contact details, blood type, and availability status.
+- **Emergency Blood Requests:** Public board for patients and families to broadcast urgent blood requests categorized by severity (`Routine`, `Urgent`, `Critical`).
 
+---
+
+## 3. Architecture
+
+LifeShare is structured as a two-tier containerized web application comprising a unified Apache/PHP web runtime and a dedicated MySQL relational database.
+
+```mermaid
+flowchart LR
+    subgraph Client["Client Tier"]
+        Browser["Web Browser\n(HTML5 / CSS3 / ES6 / Leaflet.js)"]
+    end
+
+    subgraph Host["Docker Host"]
+        subgraph WebContainer["Web Container (lifeshare-web)"]
+            Apache["Apache HTTP Server (Port 80)"]
+            PHP["PHP 8.2 Engine (mod_php)"]
+            APIs["REST API & Health\n(/api/*.php, /health.php)"]
+        end
+
+        subgraph DBContainer["Database Container (lifeshare-mysql)"]
+            MySQL["MySQL 8.0 Server (Port 3306)"]
+            Volume[("Named Volume: db_data\n(/var/lib/mysql)")]
+        end
+    end
+
+    Browser -->|"HTTP :8088 / :8080"| Apache
+    Apache --> PHP
+    PHP --> APIs
+    APIs -->|"PDO Connection (TCP :3306)"| MySQL
+    MySQL --- Volume
+```
+
+### Component Roles
+1. **Browser (Client):** Executes the single-page application (SPA), renders UI components, acquires user GPS coordinates, calculates distance matrices via Haversine logic, and requests data from the backend.
+2. **Web Container (`lifeshare-web`):** Built from official `php:8.2-apache`, serves static frontend assets (`index.html`, `styles.css`, `app.js`, `logo.svg`) and executes PHP API endpoints via PDO.
+3. **Database Container (`lifeshare-mysql`):** Runs official `mysql:8.0`, auto-initializes relational schemas and seed data on first launch, and persists data inside a Docker named volume (`db_data`).
+
+---
+
+## 4. Tech Stack
+
+| Layer | Technology | Description |
+|:---|:---|:---|
+| **Frontend** | HTML5, CSS3, JavaScript (ES6+) | Vanilla client-side SPA with dark/light theme support |
+| **Maps & Location** | Leaflet.js / Google Maps API | Geospatial marker mapping, info windows, and route directions |
+| **Geolocation** | HTML5 Geolocation API | High-accuracy coordinate detection in browser secure contexts |
+| **Proximity Algorithm** | Haversine Formula | Great-circle distance calculations between spherical coordinates |
+| **Backend Runtime** | PHP 8.2 (`php:8.2-apache`) | Apache mod_php web server with PDO MySQL extension |
+| **Database** | MySQL 8.0 | Relational database engine with InnoDB storage and UTF-8 support |
+| **Containerization** | Docker, Docker Compose | Isolated multi-container deployment with healthchecks |
+
+---
+
+## 5. Repository Structure
+
+```
+c:\bloodbank\
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # GitHub Actions CI workflow definition
+├── api/
+│   ├── db.php                     # Shared PDO connection provider (reads DB_* env vars)
+│   ├── donors.php                 # GET /api/donors.php (filtered donor listing)
+│   └── hospitals.php              # GET /api/hospitals.php (hospitals and blood inventory)
+├── docs/
+│   ├── DEMO_SCRIPT.md             # End-to-end demonstration procedure
+│   ├── DEVOPS_FINAL_REPORT.md     # Engineering report across all stages
+│   ├── DEVOPS_STAGE1.md           # Stage 1 audit and containerization record
+│   ├── DEVOPS_STAGE2.md           # Stage 2 CI and testing record
+│   ├── DEVOPS_STAGE3.md           # Stage 3 Kubernetes, HPA, and rollback record
+│   ├── PROGRESS.md                # Project milestone status tracking
+│   └── stage-report.md            # Initial inventory and pre-flight audit
+├── k8s/                           # Declarative Kubernetes manifests (Kustomize)
+├── monitoring/                    # Observability definitions (Prometheus / Grafana)
+├── tests/
+│   ├── api.test.js                # API integration test suite
+│   └── haversine.test.js          # Mathematical proximity unit tests
+├── .dockerignore                  # Build context exclusions (keeps images lean)
+├── .env.example                   # Environment variable template with safe placeholders
+├── .gitignore                     # Git tracking exclusions (ignores .env and secrets)
+├── app.js                         # Core client-side JavaScript logic (1 053 lines)
+├── docker-compose.yml             # Local multi-service orchestration (web + mysql)
+├── Dockerfile                     # Container definition for web service (php:8.2-apache)
+├── health.php                     # GET /health.php (HTTP/DB healthcheck endpoint)
+├── index.html                     # Main application single-page interface
+├── logo.svg                       # LifeShare vector branding asset
+├── package.json                   # Project scripts and test runner configuration
+├── rollback.ps1                   # Automated Kubernetes deployment rollback utility
+├── schema.sql                     # Relational schema DDL and Hyderabad seed dataset
+└── styles.css                     # Unified application styles and UI design tokens
+```
+
+---
+
+## 6. Prerequisites
+
+Ensure the following tools are installed on your host system:
+- **Git** (v2.x or later): To clone and manage source code.
+- **Docker Desktop** (with Linux container mode active): Required to run Docker Compose and container runtimes.
+- **Windows PowerShell 5.1 / PowerShell 7+** (or Bash on macOS/Linux).
+- **`curl` / `curl.exe`**: For terminal-based API testing and health verification.
+
+---
+
+## 7. Setup & Installation
+
+### Step 1: Clone the Repository
 ```powershell
-# 1. Clone repository and navigate to root
-cd c:\bloodbank
+git clone https://github.com/dhiraj2914/lifeshare-devops.git
+cd lifeshare-devops
+```
 
-# 2. Setup local environment variables
-cp .env.example .env
+### Step 2: Configure Environment Variables
+Copy the template file `.env.example` to create your local `.env` configuration:
+```powershell
+Copy-Item .env.example .env
+```
+*(On Linux/macOS: `cp .env.example .env`)*
 
-# 3. Start stack with Docker Compose
+Edit `.env` to define your local passwords and port configuration:
+```env
+# Host port mapping for the web app (default is 8080 or 8088 if 8080 is in use)
+APP_PORT=8088
+
+# MySQL root password (required by mysql:8.0 image)
+MYSQL_ROOT_PASSWORD=your_secure_root_password_here
+
+# Database connection credentials
+DB_HOST=mysql
+DB_NAME=blood_bank_db
+DB_USER=lifeshare
+DB_PASSWORD=your_secure_app_password_here
+```
+> [!CAUTION]
+> Never commit `.env` to version control. It is already included in `.gitignore` to protect sensitive local secrets.
+
+### Step 3: Build and Start Containers
+Start the multi-container stack in detached mode:
+```powershell
 docker compose up -d --build
 ```
 
-### Accessing Local Services
-- **Web Application & UI:** [http://localhost:8088](http://localhost:8088)
-- **Healthcheck Endpoint:** [http://localhost:8088/health.php](http://localhost:8088/health.php)
-- **Hospitals API (with stock):** [http://localhost:8088/api/hospitals.php](http://localhost:8088/api/hospitals.php)
-- **Donors API:** [http://localhost:8088/api/donors.php](http://localhost:8088/api/donors.php)
-- **MySQL Database:** `localhost:3307` (user: `lifeshare`, database: `blood_bank_db`)
+---
 
-### Stopping Docker Compose
+## 8. Accessing the Application
+
+Once Docker indicates both containers are healthy:
+
+| Endpoint | URL | Description |
+|:---|:---|:---|
+| **Web Application UI** | [http://localhost:8088](http://localhost:8088) *(or configured `APP_PORT`)* | Main user interface (GPS finder, donor search, requests) |
+| **System Health Check** | [http://localhost:8088/health.php](http://localhost:8088/health.php) | JSON endpoint verifying Apache, PHP, and MySQL connectivity |
+| **Hospitals API** | [http://localhost:8088/api/hospitals.php](http://localhost:8088/api/hospitals.php) | Returns all hospitals with real-time blood stock |
+| **Donors API** | [http://localhost:8088/api/donors.php](http://localhost:8088/api/donors.php) | Returns registered voluntary blood donors |
+
+### Health Check Verification
+To test connectivity from the terminal:
+```powershell
+curl.exe --max-time 10 -s http://localhost:8088/health.php
+```
+**Expected Response:**
+```json
+{
+  "status": "healthy",
+  "php": "8.2.35",
+  "db": "connected",
+  "tables": 4,
+  "ts": "2026-10-26T01:54:56+00:00"
+}
+```
+
+---
+
+## 9. Database & Seed Data
+
+The database schema and initial data are defined in [schema.sql](file:///c:/bloodbank/schema.sql).
+
+### Automatic Initialization
+When the MySQL container runs for the first time, Docker mounts `./schema.sql` into `/docker-entrypoint-initdb.d/01_schema.sql:ro`. MySQL automatically executes this script before opening network connections.
+
+### Relational Schema (4 Tables)
+1. **`hospitals`**: Stores hospital metadata including geographic coordinates (`latitude`, `longitude`), contact phone, and address.
+   - *Seeded with 6 major hospitals in Hyderabad:* NIMS (Punjagutta), Apollo Hospitals (Jubilee Hills), Care Hospitals (Banjara Hills), Yashoda Hospital (Secunderabad), Osmania General Hospital (Afzal Gunj), and Gandhi Hospital (Musheerabad).
+2. **`blood_inventory`**: Tracks units available per hospital by blood group (`hospital_id` foreign key, `blood_group`, `quantity`).
+   - *Seeded with 30 inventory rows.*
+3. **`donors`**: Registered volunteer blood donors with phone numbers, emails, coordinates, and availability toggle.
+   - *Seeded with 9 active donors.*
+4. **`blood_requests`**: Patient emergency requests with urgency ratings (`Routine`, `Urgent`, `Critical`), required blood type, hospital location, and contact details.
+   - *Seeded with 4 active requests.*
+
+Data is persisted on the Docker host via the named volume `db_data` mapped to `/var/lib/mysql`.
+
+---
+
+## 10. Managing the Docker Stack
+
+### Stop Services
+To stop running containers without losing data:
 ```powershell
 docker compose stop
 ```
 
----
-
-## 3. Kubernetes Cluster Setup (`kind`)
-
-To run the application in a local Kubernetes cluster with metrics and autoscaling:
-
+### Start Services
+To start existing stopped containers:
 ```powershell
-# 1. Create kind cluster with mapped port 30080
-kind create cluster --config k8s/kind-config.yaml
-
-# 2. Install metrics-server with kind-compatible TLS flags
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-kubectl patch deployment metrics-server -n kube-system --type 'json' -p '[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
-
-# 3. Build & load local image into kind
-docker build -t lifeshare-web:stage2 .
-kind load docker-image lifeshare-web:stage2 --name lifeshare
-
-# 4. Generate local secret from template (gitignored)
-cp k8s/secret.example.yaml k8s/secret.yaml
-
-# 5. Deploy all resources via Kustomize
-kubectl apply -k k8s/
+docker compose start
 ```
 
-### Accessing Application in Kubernetes
+### View Live Logs
+To monitor container logs in real time:
 ```powershell
-# Access via mapped NodePort
-curl.exe --max-time 10 http://localhost:30080/health.php
+# Follow all container logs
+docker compose logs -f
+
+# Follow web container logs only
+docker compose logs -f web
+
+# Follow database logs only
+docker compose logs -f mysql
 ```
 
----
-
-## 4. How Continuous Integration (CI) Works
-
-The CI pipeline is defined in [`.github/workflows/ci.yml`](file:///.github/workflows/ci.yml) and automatically triggers on `push` and `pull_request`:
-
-1. **Linting:** Validates PHP syntax (`php -l`) and JavaScript syntax (`node --check`).
-2. **Testing:** Executes Haversine unit tests and launches service containers to test API contracts (`node --test tests/`).
-3. **Security Scan:** Builds the image and runs **Trivy** vulnerability scanner pinned to release `@0.29.0`. Fails build on any unfixed `HIGH` or `CRITICAL` vulnerability (currently 0 CVEs).
-4. **Publishing:** On push to `main`, automatically pushes tagged images to GitHub Container Registry (`ghcr.io`).
-
-Run tests locally anytime:
+### Rebuild After Code Changes
+When updating frontend files or PHP scripts:
 ```powershell
-npm run test:unit
+docker compose up -d --build web
 ```
+
+### Checking Container Health
+```powershell
+docker compose ps
+```
+
+> [!WARNING]
+> **DO NOT RUN `docker compose down -v`**
+> The `-v` flag deletes named Docker volumes. Executing `docker compose down -v` will **destroy the `db_data` volume**, erasing all database tables, hospital inventories, and donor records permanently. Use `docker compose down` (without `-v`) when stopping and tearing down containers.
 
 ---
 
-## 5. Monitoring & Alerting (`kube-prometheus-stack`)
+## 11. Troubleshooting
 
-Install Prometheus and Grafana using Helm:
+### 1. Port Collision (`bind: Only one usage of each socket address is normally permitted`)
+- **Cause:** Another service on your computer is already using port 8080 (such as Windows IIS, Apache, or another dev server) or port 3306 (a local MySQL instance).
+- **Solution:** 
+  - Change `APP_PORT` in your `.env` file to an unused port (e.g. `APP_PORT=8088`).
+  - The MySQL service in `docker-compose.yml` is already mapped to host port `3307:3306` to prevent conflict with local MySQL installations on 3306.
 
-```powershell
-# 1. Add Prometheus Helm repository
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
+### 2. MySQL Not Ready Yet (`HTTP 503 / "db": "unreachable"`)
+- **Cause:** On initial creation, MySQL requires 15 to 30 seconds to initialize database files, apply character sets, and run the `schema.sql` seed script.
+- **Solution:** The web container uses `depends_on: mysql: condition: service_healthy` to wait for MySQL readiness. If you query `/health.php` before MySQL finishes its initial boot, wait 10 seconds and test again. Inspect initialization logs using:
+  ```powershell
+  docker compose logs mysql
+  ```
 
-# 2. Install stack with lightweight laptop resource limits
-helm install prometheus-stack prometheus-community/kube-prometheus-stack \
-  --namespace monitoring --create-namespace \
-  -f k8s/monitoring/values.yaml
-
-# 3. Apply custom alert rules and Grafana dashboard
-kubectl apply -f k8s/monitoring/alert-rules.yaml
-kubectl apply -f k8s/monitoring/dashboard.yaml
-```
-
-### Local Access to Dashboards
-Run in separate background sessions:
-```powershell
-# Prometheus UI
-kubectl port-forward svc/prometheus-stack-kube-prom-prometheus 9090:9090 -n monitoring --address 127.0.0.1
-
-# Grafana UI (login: admin / admin)
-kubectl port-forward svc/prometheus-stack-grafana 3000:80 -n monitoring --address 127.0.0.1
-```
-Open [http://localhost:3000](http://localhost:3000) and open **LifeShare Deployment Overview**.
+### 3. GPS Geolocation Not Working in Browser
+- **Cause:** Modern browsers enforce the W3C Geolocation Secure Context specification. GPS access (`navigator.geolocation`) is only permitted on:
+  - `http://localhost` (or `http://127.0.0.1`)
+  - Any valid `https://` domain
+- **Solution:** Access the app using `http://localhost:8088`. If accessing over a local LAN IP address (e.g., `http://192.168.1.50:8088`), the browser will automatically deny location permissions. You can also manually drop a pin on the map to set your location without GPS.
 
 ---
 
-## 6. How to Run Evaluator Demonstrations
+## 12. Planned DevOps Roadmap
 
-A step-by-step 10-minute demonstration covering:
-- Smoke tests & seed data verification
-- Pod self-healing
-- Erroneous deployment with zero downtime & instant rollback
-- Autoscaling from 2 to 5 pods under heavy load
-- Alert firing and clearing
+The following enterprise DevOps capabilities are currently planned for upcoming implementation phases:
 
-👉 Follow the full script in [`docs/DEMO_SCRIPT.md`](file:///docs/DEMO_SCRIPT.md).
+- **CI/CD with GitHub Actions** — *[PLANNED]*:
+  - Automated PHP syntax linting (`php -l`) and JavaScript syntax verification.
+  - Automated unit and integration testing (Haversine formula validation, API response verification, health probe testing).
+  - Multi-stage Docker image builds tagged with commit SHAs.
+  - Container vulnerability scanning using Trivy to detect and fail builds on `HIGH` or `CRITICAL` CVEs.
+  - Automated container image publishing to GitHub Container Registry (`ghcr.io`) upon merges to `main`.
+
+- **Local Kubernetes Deployment & Orchestration** — *[PLANNED]*:
+  - Multi-tier declarative manifests organized with Kustomize.
+  - StatefulSet with PersistentVolumeClaims (PVC) for MySQL.
+  - Rolling update Deployments with readiness and liveness health probes on `/health.php`.
+  - In-cluster Horizontal Pod Autoscaling (HPA) scaling between 2 and 5 replicas based on real-time CPU utilization via `metrics-server`.
+  - Zero-downtime rollback capabilities to instantly revert faulty releases (`kubectl rollout undo`).
+
+- **Monitoring, Alerting & Observability** — *[PLANNED]*:
+  - Observability stack deployment using `kube-prometheus-stack` (Prometheus, Alertmanager, Grafana).
+  - Alert rules covering pod restart loops, unavailable replicas, failed health checks, and sustained high CPU load.
+  - Grafana dashboard visualizing live pod counts, CPU/memory consumption, and HTTP request metrics.
 
 ---
 
-## 7. Troubleshooting
+## 13. Team & Academic Context
 
-| Issue | Cause | Resolution |
-|---|---|---|
-| Port 8080 or 3306 in use | Windows services or local MySQL bound to default ports | Compose maps web to port **8088** and MySQL to **3307**. Check `.env` `APP_PORT`. |
-| `metrics-server` shows 0/1 | kind uses self-signed kubelet certificates | Ensure patch `--kubelet-insecure-tls` was applied to metrics-server deployment. |
-| Image pull error in kind | Local image not loaded into kind node | Run `kind load docker-image lifeshare-web:stage2 --name lifeshare`. |
-| HPA shows `<unknown>/50%` | metrics-server is still collecting first cycle metrics | Wait 30 seconds for initial cycle to register. |
+LifeShare was conceived and developed as an academic capstone engineering project addressing healthcare resource accessibility and rapid emergency response systems.
 
----
+- **Project Title:** LifeShare – GPS-Based Blood Bank Availability Finder
+- **Institution:** `[University / College Name]`
+- **Department:** `[Department of Computer Science & Engineering]`
+- **Academic Year / Batch:** `[Academic Year / Capstone Group]`
 
-## 8. Safe Teardown
+### Project Contributors
+- **Student Contributor:** `[Team Member Name 1]` — *`[Role / Responsibilities]`*
+- **Student Contributor:** `[Team Member Name 2]` — *`[Role / Responsibilities]`*
+- **Student Contributor:** `[Team Member Name 3]` — *`[Role / Responsibilities]`*
+- **Student Contributor:** `[Team Member Name 4]` — *`[Role / Responsibilities]`*
 
-To shut down only the local kind cluster without deleting any global Docker volumes or configurations:
-
-```powershell
-kind delete cluster --name lifeshare
-```
+### Academic Guide & Mentorship
+- **Project Supervisor:** `[Advisor / Professor Name]`, `[Designation & Department]`
