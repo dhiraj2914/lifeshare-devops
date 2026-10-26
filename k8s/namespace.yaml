@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: lifeshare
   labels:
-    app: lifeshare
+    app.kubernetes.io/name: lifeshare

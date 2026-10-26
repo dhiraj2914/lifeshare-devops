@@ -13,6 +13,11 @@ FROM php:8.2-apache
 LABEL maintainer="Athreya, Dhiraj, Rithwik, Sagar"
 LABEL description="LifeShare GPS Blood Bank Finder – php:8.2-apache"
 
+# Update and upgrade base packages to resolve upstream CVEs (fixes Trivy HIGH/CRITICAL findings)
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install the PDO MySQL extension (needed by api/ and health.php).
 # docker-php-ext-install is the recommended way inside official PHP images.
 RUN docker-php-ext-install pdo pdo_mysql

@@ -1,0 +1,47 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: lifeshare-alert-rules
+  namespace: monitoring
+  labels:
+    release: prometheus-stack
+    app: lifeshare
+spec:
+  groups:
+    - name: lifeshare.rules
+      rules:
+        - alert: LifeShareWebPodNotReady
+          expr: kube_pod_status_ready{namespace="lifeshare", condition="false", pod=~"lifeshare-web-.*"} > 0
+          for: 15s
+          labels:
+            severity: warning
+          annotations:
+            summary: "LifeShare web pod is not ready"
+            description: "Pod {{ $labels.pod }} in namespace lifeshare is in not ready state."
+
+        - alert: LifeShareWebReplicasUnavailable
+          expr: (kube_deployment_status_replicas_available{namespace="lifeshare", deployment="lifeshare-web"} < kube_deployment_spec_replicas{namespace="lifeshare", deployment="lifeshare-web"}) or (absent(kube_deployment_status_replicas_available{namespace="lifeshare", deployment="lifeshare-web"}) == 1)
+          for: 15s
+          labels:
+            severity: critical
+          annotations:
+            summary: "Fewer available web replicas than desired"
+            description: "Deployment lifeshare-web has fewer available pods than the desired count."
+
+        - alert: LifeShareWebPodRestarts
+          expr: increase(kube_pod_container_status_restarts_total{namespace="lifeshare", container="web"}[5m]) > 0
+          for: 30s
+          labels:
+            severity: warning
+          annotations:
+            summary: "Repeated pod restarts detected"
+            description: "Pod {{ $labels.pod }} container web has restarted recently."
+
+        - alert: LifeShareWebHighCPU
+          expr: sum(rate(container_cpu_usage_seconds_total{namespace="lifeshare", pod=~"lifeshare-web-.*"}[1m])) by (pod) > 0.35
+          for: 45s
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage on web pod"
+            description: "Pod {{ $labels.pod }} CPU usage exceeded 350m."
